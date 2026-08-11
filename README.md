@@ -471,6 +471,9 @@ script that produces a professional single-file installer:
 4. Run it on the target machine.  Python 3.8+ is required; the installer
    detects Python during setup (registry and PATH) and warns if it is
    missing or too old.
+5. The installer is per-user (no administrator rights needed) and ships
+   a standard uninstaller - uninstall from **Settings > Apps** or the
+   Start-menu entry, which also removes generated results and sample data.
 
 The installer bundles the full application (source + launcher + icon + tests),
 the first-time-user tutorial (`docs/TUTORIAL.md`), the three example signals

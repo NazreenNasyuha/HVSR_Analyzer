@@ -29,8 +29,9 @@ AppSupportURL=https://github.com/NazreenNasyuha/HVSR_Analyzer/issues
 AppUpdatesURL=https://github.com/NazreenNasyuha/HVSR_Analyzer/releases
 AppCopyright={#MyAppCopyright}
 AppComments=Horizontal-to-Vertical Spectral Ratio (HVSR) analysis, pure Python
-DefaultDirName={autopf}\HVSR Analyzer
+DefaultDirName={localappdata}\Programs\HVSR Analyzer
 DefaultGroupName={#MyAppName}
+PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 OutputDir=Output
 OutputBaseFilename=HVSR_Analyzer_Setup
@@ -71,12 +72,14 @@ Source: "..\src\eqd_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\sg2_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\hvsr_geopsy.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\hvsr_standards.py";         DestDir: "{app}\src";  Flags: ignoreversion
+Source: "..\src\hvsr_tour.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\hvsr_inversion.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\chart_render.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\src\make_sample_data.py";         DestDir: "{app}\src";  Flags: ignoreversion
 Source: "..\README.md";           DestDir: "{app}";      Flags: ignoreversion
 Source: "..\CHANGELOG.md";        DestDir: "{app}";      Flags: ignoreversion
 Source: "..\docs\TUTORIAL.md";     DestDir: "{app}\docs";  Flags: ignoreversion
+Source: "..\docs\screenshots\*";  DestDir: "{app}\docs\screenshots";  Flags: ignoreversion
 Source: "..\examples\example.eqd";        DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example_Z.mseed";     DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example_N.mseed";     DestDir: "{app}\examples";  Flags: ignoreversion
@@ -98,6 +101,17 @@ Name: "{autodesktop}\{#MyAppName}";  Filename: "{app}\{#MyAppExeName}"; IconFile
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; Remove runtime-generated data (results, sample data, bytecode caches)
+; so a clean uninstall leaves nothing behind.  Installed files are
+; removed automatically by Inno.
+Type: filesandordirs; Name: "{app}\src\HVSR_Results"
+Type: filesandordirs; Name: "{app}\src\HVSR_Results_E2E"
+Type: filesandordirs; Name: "{app}\src\sample_data"
+Type: filesandordirs; Name: "{app}\src\__pycache__"
+Type: filesandordirs; Name: "{app}	ests\__pycache__"
+Type: filesandordirs; Name: "{app}\__pycache__"
 
 [Code]
 function ParseVersionPair(const V: String; out Major, Minor: Integer): Boolean;

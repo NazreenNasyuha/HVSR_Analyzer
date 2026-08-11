@@ -12,29 +12,40 @@ jobs:
   test:
     name: Run test suite
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.12.x"
 
       - name: Install dependencies
-        run: pip install --quiet pillow
+        run: pip install --quiet pillow==11.3.0
         # pillow is only used by installer/make_icon.py (icon generation);
-        # the application itself is pure standard library.
+        # the application itself is pure standard library.  Pinned so the
+        # icon-regeneration diff check stays byte-stable on CI.  If you
+        # bump pillow, regenerate the icons too (python installer/make_icon.py)
+        # and commit them, or the Verify icon generator step will fail.
 
-      - name: Run test suite
-        # test_gui.py uses a custom pass/fail harness, so run each file
-        # directly (the documented commands in the README).
-        run: |
-          python tests/test_engine.py &&
-          python tests/test_io.py &&
-          python tests/test_extras.py &&
-          python tests/test_inversion.py &&
-          python tests/test_gui.py
+      # Each test file runs as its own step so a failure shows exactly
+      # which file broke (the unittest files already print verbose output).
+      - name: Run test_engine.py
+        run: python tests/test_engine.py
+
+      - name: Run test_io.py
+        run: python tests/test_io.py
+
+      - name: Run test_extras.py
+        run: python tests/test_extras.py
+
+      - name: Run test_inversion.py
+        run: python tests/test_inversion.py
+
+      - name: Run test_gui.py
+        run: python tests/test_gui.py
 
       - name: Verify icon generator
         run: |
@@ -46,11 +57,12 @@ jobs:
     name: Build installer
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download Inno Setup 6
         shell: pwsh

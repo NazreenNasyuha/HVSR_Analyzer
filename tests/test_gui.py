@@ -490,7 +490,11 @@ def main():
           app._tour is None or not app._tour.active)
 
     app.destroy()
-    check("no blocking error dialogs appeared", not dialogs, str(dialogs))
+    # Only ERROR dialogs are failures.  The app legitimately shows an info
+    # popup ("GEOPSY NOT FOUND.") when Geopsy is not installed, which is
+    # normal on machines / CI runners without Geopsy; treat those as OK.
+    check("no blocking error dialogs appeared",
+          not any(t == "error" for t, _ in dialogs), str(dialogs))
     print("\n" + "=" * 60)
     print("RESULT: %d passed, %d failed" % (PASS, FAIL))
     if FAILURES:

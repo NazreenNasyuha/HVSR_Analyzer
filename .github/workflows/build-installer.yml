@@ -1,0 +1,88 @@
+name: Build installer
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run test suite
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --quiet pillow
+        # pillow is only used by installer/make_icon.py (icon generation);
+        # the application itself is pure standard library.
+
+      - name: Run test suite
+        # test_gui.py uses a custom pass/fail harness, so run each file
+        # directly (the documented commands in the README).
+        run: |
+          python tests/test_engine.py &&
+          python tests/test_io.py &&
+          python tests/test_extras.py &&
+          python tests/test_inversion.py &&
+          python tests/test_gui.py
+
+      - name: Verify icon generator
+        run: |
+          python installer/make_icon.py
+          python -c "from PIL import Image; im = Image.open('installer/HVSR_Analyzer.png'); print('icon OK', im.size)"
+          git diff --exit-code -- installer/HVSR_Analyzer.ico installer/HVSR_Analyzer.png
+
+  build:
+    name: Build installer
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Inno Setup 6
+        shell: pwsh
+        run: |
+          $url = "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe"
+          $exe = Join-Path $env:TEMP "innosetup-6.7.3.exe"
+          Invoke-WebRequest -Uri $url -OutFile $exe
+          Start-Process -FilePath $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          Write-Host "Using $iscc"
+          & $iscc "installer/HVSR_Analyzer_Setup.iss"
+
+      - name: Upload setup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HVSR_Analyzer_Setup
+          path: installer/Output/HVSR_Analyzer_Setup.exe
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/Output/HVSR_Analyzer_Setup.exe
+          generate_release_notes: true

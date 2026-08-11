@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Test / debug data (generated at runtime)
+sample_data/
+HVSR_Results/
+HVSR_Results_E2E/
+geo_dbg*/
+fullcmp_*.csv
+fullcmp_*.log
+data_log.csv
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Installer output
+installer/HVSR_Analyzer_Setup.exe
+installer/Output/
+
+# UI review screenshots (local development artifacts)
+_ui_review/
+HVSR_Results_Screenshots/

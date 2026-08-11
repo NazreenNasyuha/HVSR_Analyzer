@@ -8,7 +8,7 @@ Spectral Ratio (HVSR)** microtremor analysis — rebuilt from scratch with
 matplotlib. Everything runs on the Python standard library.
 
 It is a from-scratch re-implementation of the original
-`HVSR Geopsy 5th SeisPrb-3C-OS.py` script, with a real GUI, batch
+Nazreen script, with a real GUI, batch
 processing, built-in charts, an installer **and a built-in 1D inversion**.
 
 **New here? Start with the [First-Time User Tutorial](docs/TUTORIAL.md)** — it
@@ -217,7 +217,7 @@ feature table below).
 
 ## How it differs from the original script (and why it is better)
 
-| Original (`...SeisPrb-3C-OS.py`) | New program |
+| Original (Nazreen Script) | New program |
 |---|---|
 | Hard-coded machine paths | Paths chosen in the GUI via pop-up dialogs; Geopsy auto-detected |
 | Terminal + single file dialog, no interface | Full tkinter GUI with parameter control, charts, reports |

@@ -69,7 +69,10 @@ jobs:
         # Packages the app with a private Python runtime + tkinter, so the
         # installer ships an exe that needs no Python on the target machine.
         run: |
-          pip install --quiet pyinstaller==6.22.0
+          # tkinterdnd2 is needed too: build_exe.py passes --collect-all
+          # tkinterdnd2, so the shipped app must bundle the drag-and-drop
+          # native library (--collect-all errors if the package is absent).
+          pip install --quiet pyinstaller==6.22.0 tkinterdnd2
           python scripts/build_exe.py
 
       - name: Download Inno Setup 6

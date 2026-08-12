@@ -113,4 +113,4 @@ jobs:
           generate_release_notes: true
           # Tolerate a release/asset created beforehand (e.g. by a manual
           # `gh release create`) and refresh it with the CI-built installer.
-          overwrite: true
+          overwrite_files: true

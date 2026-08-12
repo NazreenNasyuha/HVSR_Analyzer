@@ -104,14 +104,19 @@ Type: filesandordirs; Name: "{app}\run.bat"
 ; uninstall).  Double-clicking a recording opens HVSR Analyzer with that
 ; file pre-loaded (see the command-line handling in hvsr_gui.main()).
 ; The extensions are niche seismic formats, so claiming them is safe.
+; IMPORTANT: these must use Root: HKCU under Software\Classes.  Root: HKCR
+; resolves to HKEY_CLASSES_ROOT, which is backed by HKLM and requires admin
+; rights - RegCreateKeyEx then fails with "Access denied" (code 5) on a
+; per-user install and the associations silently never register.  This same
+; HKCU\Software\Classes location is what the in-app toggle writes to.
 ; (uninsdeletekey removes the whole per-user <ext> key on uninstall - the
 ; formats are effectively app-owned, so no realistic collision.)
-Root: HKCR; Subkey: "HVSR_Analyzer\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\HVSR_Analyzer\HVSR_Analyzer.exe,0"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "HVSR_Analyzer\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\HVSR_Analyzer\HVSR_Analyzer.exe"" ""%1"""; Flags: uninsdeletekey
-Root: HKCR; Subkey: ".eqd";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
-Root: HKCR; Subkey: ".sg2";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
-Root: HKCR; Subkey: ".mseed";    ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
-Root: HKCR; Subkey: ".miniseed"; ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\HVSR_Analyzer\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\HVSR_Analyzer\HVSR_Analyzer.exe,0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\HVSR_Analyzer\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\HVSR_Analyzer\HVSR_Analyzer.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.eqd";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.sg2";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mseed";    ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.miniseed"; ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

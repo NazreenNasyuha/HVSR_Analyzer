@@ -2,7 +2,18 @@
 
 All notable changes to HVSR Analyzer are documented here.
 
-## 1.1.0 (unreleased)
+## 1.1.1 (2026-08-12)
+
+- **Fixed installer file associations**: the installer previously wrote the
+  `.eqd` / `.sg2` / `.mseed` / `.miniseed` associations under
+  `HKEY_CLASSES_ROOT`, which is backed by HKLM and requires admin rights.
+  On a per-user install every write failed with "Access denied" and the
+  associations silently never registered.  They are now written per-user
+  under `HKCU\Software\Classes` (the same location the in-app toggle
+  writes to), so double-clicking a recording opens the app with that file
+  pre-loaded.
+
+## 1.1.0
 
 - **No Python needed to run the app**: the app is now packaged with
   PyInstaller (`scripts/build_exe.py`), which bundles a private Python

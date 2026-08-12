@@ -24,6 +24,10 @@ Thumbs.db
 installer/HVSR_Analyzer_Setup.exe
 installer/Output/
 
+# PyInstaller build output (scripts/build_exe.py)
+dist/
+build/
+
 # UI review screenshots (local development artifacts)
 _ui_review/
 HVSR_Results_Screenshots/

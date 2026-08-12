@@ -46,6 +46,12 @@ def _report_startup_failure(exc):
 
 
 if __name__ == "__main__":
+    # Required when the app is packaged with PyInstaller: the bundled exe is
+    # re-executed by each spawned multiprocessing worker (ProcessPoolExecutor
+    # on Windows), and freeze_support() makes those children exit without
+    # re-running the GUI.  Harmless when running from source.
+    import multiprocessing
+    multiprocessing.freeze_support()
     try:
         from hvsr_gui import main
         main()

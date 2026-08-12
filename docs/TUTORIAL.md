@@ -4,9 +4,9 @@ This guide walks you through the whole workflow, from launching the app to
 reading your first H/V result — and it uses the **bundled example signals**
 so you can follow along without any field data.
 
-> **Time needed:** about 10 minutes. **What you need:** Python 3.8+ on
-> Windows (see [README](../README.md) for other platforms) or the installed
-> app from the installer (see the [Installer section](../README.md#installer)).
+> **Time needed:** about 10 minutes. **What you need:** the app itself —
+> either the [installed version](../README.md#getting-it-running) (no Python
+> required) or Python 3.8+ if you'd rather run it from source.
 
 ---
 
@@ -30,7 +30,11 @@ mis-configured one.
 
 ## 1. Launching the app
 
-### Option A — run from source
+### Option A — installed version (easiest)
+
+Run the app from the Start menu / desktop shortcut created by the installer.
+
+### Option B — run from source
 
 Open a terminal in the project folder and run:
 
@@ -39,10 +43,6 @@ python src/main.py
 ```
 
 On Windows you can also double-click `run.bat`.
-
-### Option B — installed version
-
-Run the app from the Start menu / desktop shortcut created by the installer.
 
 You should see the main window with the **4-step workflow** on the left and
 the results tabs on the right.  Click the **TUTORIAL** button in the top
@@ -79,6 +79,23 @@ right slots.
 > **Hint:** leave the *Start / End* time fields empty (or click **USE FULL**)
 > and leave *Save to* empty — the app will create an `HVSR_Results` folder
 > next to the input file.
+
+> **Even quicker — drag and drop:** you can skip the dialogs entirely and
+> drop files straight onto the window:
+>
+> - drop the three `example_Z/N/E.mseed` files **together** — the slots fill
+>   themselves and the preview updates automatically;
+> - drop a single `.eqd` / `.sg2` / 3-column file — it goes into **Z**;
+> - drop a `.pz` file — it lands in the **RESPONSE** slot;
+> - drop a *folder* — the app immediately starts **BATCH PROCESS FOLDER**
+>   on it.
+>
+> The whole input card highlights while you drag, so you always know the
+> window is ready to receive the files.  And in the installed version you
+> can also just **double-click** a recording (`.eqd` / `.sg2` / `.mseed` /
+> `.miniseed`) in Explorer — the app opens with it already loaded.  That
+> behaviour is a per-user setting you can turn on or off any time with the
+> **FILE ASSOCIATIONS** checkbox on tab 04.
 
 ---
 
@@ -179,17 +196,18 @@ looks wrong) and that the window length is long enough.
 
 **Q: The miniSEED files won't load on their own?**
 A single miniSEED file holds only one component. Select **all three**
-`example_*.mseed` files together, or use the `.eqd` / `.sg2` single-file
-examples instead.
+`example_*.mseed` files together — or drag and drop them onto the window as
+a group — or use the `.eqd` / `.sg2` single-file examples instead.
 
 **Q: Where did my results go?**
 If you left *Save to* empty, look for an `HVSR_Results` folder next to the
 input file. Every run is also appended to `data_log.csv` there.
 
 **Q: How do I process a whole folder of recordings?**
-Use **BATCH PROCESS FOLDER...** on the workflow — point it at a folder and
-the app analyses every compatible file in it, writing per-station
-reports/CSVs/PNGs plus an `all_stations_summary.csv`.
+Use **BATCH PROCESS FOLDER...** on the workflow — or simply drag the folder
+onto the window. The app analyses every compatible file in it, writing
+per-station reports/CSVs/PNGs plus an `all_stations_summary.csv`, and
+flashes the taskbar when the batch finishes.
 
 ---
 

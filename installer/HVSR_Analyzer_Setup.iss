@@ -2,20 +2,27 @@
 ;  HVSR Analyzer - Inno Setup installer script
 ; ============================================================================
 ;  Build the installer:
-;    1. Download Inno Setup 6 (free) from  https://jrsoftware.org/isinfo.php
-;    2. Open this file in Inno Setup and press Compile, or run:
-;         ISCC.exe HVSR_Analyzer_Setup.iss
+;    1. Build the standalone app first (bundles a private Python runtime +
+;       tkinter, so end users do NOT need Python installed):
+;           pip install pyinstaller
+;           python scripts/build_exe.py
+;       Output:  dist\HVSR_Analyzer\
+;    2. Compile this script with Inno Setup 6 (free) from
+;       https://jrsoftware.org/isinfo.php - open it in Inno Setup and press
+;       Compile, or run:
+;           ISCC.exe HVSR_Analyzer_Setup.iss
 ;    3. The single-file setup  Output\HVSR_Analyzer_Setup.exe  is produced.
 ;
-;  The application is pure Python (standard library only) and requires an
-;  installed Python 3.8+ on the target machine.  The installer detects
-;  Python on the machine and warns if it is missing or too old.
+;  The application is pure Python (standard library only) packaged by
+;  PyInstaller: the setup ships the exe together with its own private
+;  Python runtime, so no Python installation is required on the target
+;  machine.
 ; ============================================================================
 
 #define MyAppName "HVSR Analyzer"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "NazreenNasyuha"
-#define MyAppExeName "run.bat"
+#define MyAppExeName "HVSR_Analyzer\HVSR_Analyzer.exe"
 #define MyAppCopyright "Copyright (c) 2026 NazreenNasyuha"
 
 [Setup]
@@ -42,8 +49,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=HVSR_Analyzer.ico
 UninstallDisplayIcon={app}\HVSR_Analyzer.ico
+; Tell Explorer to refresh its icon/association cache after install/uninstall.
+ChangesAssociations=yes
 LicenseFile=..\LICENSE
-VersionInfoVersion=1.0.0.0
+VersionInfoVersion=1.1.0.0
 VersionInfoCopyright={#MyAppCopyright}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=HVSR Analyzer - pure-Python HVSR analysis suite
@@ -59,150 +68,59 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "..\src\main.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\run.bat";             DestDir: "{app}";      Flags: ignoreversion
-Source: "..\src\hvsr_gui.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_theme.py";        DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_plot.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_engine.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_dsp.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\mseed_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\eqd_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\sg2_io.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_geopsy.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_standards.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_tour.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\hvsr_inversion.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\chart_render.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\src\make_sample_data.py";         DestDir: "{app}\src";  Flags: ignoreversion
-Source: "..\README.md";           DestDir: "{app}";      Flags: ignoreversion
-Source: "..\CHANGELOG.md";        DestDir: "{app}";      Flags: ignoreversion
-Source: "..\docs\TUTORIAL.md";     DestDir: "{app}\docs";  Flags: ignoreversion
-Source: "..\docs\screenshots\*";  DestDir: "{app}\docs\screenshots";  Flags: ignoreversion
+; The PyInstaller bundle: the app exe plus its private Python runtime,
+; tkinter and standard library.  No Python installation is needed on the
+; target machine.  Build it first with  python scripts/build_exe.py
+Source: "..\dist\HVSR_Analyzer\*"; DestDir: "{app}\HVSR_Analyzer"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\README.md";             DestDir: "{app}";      Flags: ignoreversion
+Source: "..\CHANGELOG.md";          DestDir: "{app}";      Flags: ignoreversion
+Source: "..\docs\TUTORIAL.md";       DestDir: "{app}\docs";  Flags: ignoreversion
+Source: "..\docs\screenshots\*";    DestDir: "{app}\docs\screenshots";  Flags: ignoreversion
 Source: "..\examples\example.eqd";        DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example_Z.mseed";     DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example_N.mseed";     DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example_E.mseed";     DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\example.sg2";        DestDir: "{app}\examples";  Flags: ignoreversion
 Source: "..\examples\README.md";    DestDir: "{app}\examples";  Flags: ignoreversion
-Source: "..\LICENSE";             DestDir: "{app}";      Flags: ignoreversion
+Source: "..\LICENSE";               DestDir: "{app}";      Flags: ignoreversion
 Source: "HVSR_Analyzer.ico";        DestDir: "{app}";      Flags: ignoreversion
-Source: "..\tests\test_engine.py";    DestDir: "{app}\tests";  Flags: ignoreversion
-Source: "..\tests\test_io.py";    DestDir: "{app}\tests";  Flags: ignoreversion
-Source: "..\tests\test_extras.py";    DestDir: "{app}\tests";  Flags: ignoreversion
-Source: "..\tests\test_gui.py";    DestDir: "{app}\tests";  Flags: ignoreversion
-Source: "..\tests\test_inversion.py";    DestDir: "{app}\tests";  Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}";        Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\HVSR_Analyzer.ico"; WorkingDir: "{app}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"; IconFilename: "{app}\HVSR_Analyzer.ico"
 Name: "{autodesktop}\{#MyAppName}";  Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\HVSR_Analyzer.ico"; WorkingDir: "{app}"; Tasks: desktopicon
 
+[InstallDelete]
+; Remove files shipped by pre-1.1.0 installers that the packaged build no
+; longer needs (the PyInstaller bundle replaces the loose sources, tests and
+; the run.bat launcher).  Without this, upgrading from 1.0.0 leaves stale
+; files behind.
+Type: filesandordirs; Name: "{app}\src"
+Type: filesandordirs; Name: "{app}\tests"
+Type: filesandordirs; Name: "{app}\run.bat"
+
+[Registry]
+; Per-user file associations (written to HKCU\Software\Classes, removed on
+; uninstall).  Double-clicking a recording opens HVSR Analyzer with that
+; file pre-loaded (see the command-line handling in hvsr_gui.main()).
+; The extensions are niche seismic formats, so claiming them is safe.
+; (uninsdeletekey removes the whole per-user <ext> key on uninstall - the
+; formats are effectively app-owned, so no realistic collision.)
+Root: HKCR; Subkey: "HVSR_Analyzer\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\HVSR_Analyzer\HVSR_Analyzer.exe,0"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "HVSR_Analyzer\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\HVSR_Analyzer\HVSR_Analyzer.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCR; Subkey: ".eqd";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCR; Subkey: ".sg2";      ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCR; Subkey: ".mseed";    ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+Root: HKCR; Subkey: ".miniseed"; ValueType: string; ValueName: ""; ValueData: "HVSR_Analyzer"; Flags: uninsdeletekey
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Remove runtime-generated data (results, sample data, bytecode caches)
-; so a clean uninstall leaves nothing behind.  Installed files are
-; removed automatically by Inno.
-Type: filesandordirs; Name: "{app}\src\HVSR_Results"
-Type: filesandordirs; Name: "{app}\src\HVSR_Results_E2E"
-Type: filesandordirs; Name: "{app}\src\sample_data"
-Type: filesandordirs; Name: "{app}\src\__pycache__"
-Type: filesandordirs; Name: "{app}	ests\__pycache__"
-Type: filesandordirs; Name: "{app}\__pycache__"
-
-[Code]
-function ParseVersionPair(const V: String; out Major, Minor: Integer): Boolean;
-var
-  P: Integer;
-  T: String;
-begin
-  Result := False;
-  Major := -1;
-  Minor := -1;
-  { The registry SysVersion value is dot-separated ("3.13") while the
-    python -c probe prints space-separated integers ("3 13").  Normalise
-    both to a space-separated pair before splitting. }
-  T := V;
-  StringChangeEx(T, '.', ' ', True);
-  P := Pos(' ', T);
-  if P > 0 then
-  begin
-    Major := StrToIntDef(Copy(T, 1, P - 1), -1);
-    Delete(T, 1, P);
-    P := Pos(' ', T);
-    if P > 0 then
-      Minor := StrToIntDef(Copy(T, 1, P - 1), -1)
-    else
-      Minor := StrToIntDef(T, -1);
-    Result := (Major > 0) and (Minor >= 0);
-  end;
-end;
-
-function SufficientVersion(Major, Minor: Integer): Boolean;
-begin
-  Result := (Major > 3) or ((Major = 3) and (Minor >= 8));
-end;
-
-function RegistryPythonVersion(out Major, Minor: Integer): Boolean;
-var
-  Key: String;
-  V: String;
-begin
-  Result := False;
-  Key := 'Software\Python\PythonCore';
-  { Check the 64-bit view first (HKLM64) so a machine-wide 64-bit Python
-    install is seen even though this installer itself runs 32-bit, then the
-    regular HKLM view and finally the per-user HKCU key. }
-  if RegQueryStringValue(HKLM64, Key, 'SysVersion', V) then
-    Result := ParseVersionPair(V, Major, Minor)
-  else if RegQueryStringValue(HKLM, Key, 'SysVersion', V) then
-    Result := ParseVersionPair(V, Major, Minor)
-  else if RegQueryStringValue(HKCU, Key, 'SysVersion', V) then
-    Result := ParseVersionPair(V, Major, Minor);
-end;
-
-function PythonSufficient(): Boolean;
-var
-  Res: Integer;
-begin
-  Result := False;
-  { Probe the PATH interpreter through its exit code: python exits 0 when
-    sys.version_info >= (3, 8) and 1 otherwise.  This needs no stdout
-    capture (ExecWithOutput is unavailable in some builds) and the -c
-    argument has no embedded double quotes, so Windows argument parsing
-    cannot split it. }
-  if ExecAsOriginalUser('python',
-      '-c "import sys; raise SystemExit(0 if sys.version_info >= (3, 8) else 1)"',
-      '', SW_HIDE, ewWaitUntilTerminated, Res) then
-    Result := (Res = 0);
-end;
-
-function PythonDetected(): Boolean;
-var
-  Major, Minor: Integer;
-begin
-  { Check the PATH interpreter first - that is what run.bat actually
-    launches - then fall back to a registered installation. }
-  if PythonSufficient() then
-    Result := True
-  else if RegistryPythonVersion(Major, Minor) then
-    Result := SufficientVersion(Major, Minor)
-  else
-    Result := False;
-end;
-
-procedure CurPageChanged(CurPageID: Integer);
-begin
-  if CurPageID = wpReady then
-  begin
-    if not PythonDetected() then
-      MsgBox('Python 3.8 or newer was not detected on this system.' + #13#10 +
-             'HVSR Analyzer is written in pure Python and needs it to run.' + #13#10 + #13#10 +
-             'Install Python from https://www.python.org/downloads/ ' +
-             '(tick "Add python.exe to PATH") and then re-run this setup.',
-             mbInformation, MB_OK);
-  end;
-end;
+; Remove the whole PyInstaller bundle folder: the recursed files are normally
+; deleted by the uninstaller from its log, but the onedir bundle is large and
+; a clean uninstall must never leave it (or any runtime data) behind.
+; With no output folder chosen the frozen app auto-creates HVSR_Results next
+; to the exe, i.e. inside this folder too (see hvsr_gui._out_dir).
+Type: filesandordirs; Name: "{app}\HVSR_Analyzer"
+Type: dirifempty;     Name: "{app}"

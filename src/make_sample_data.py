@@ -70,6 +70,8 @@ def make_station(duration=600.0, fs=100.0, f0=2.0, seed=42):
 
 
 def write_station(folder, name="station_A", duration=600.0, fs=100.0, f0=2.0, seed=42):
+    """Generate the synthetic station and write it as a 3-column CSV into
+    ``folder``; returns the path to the Z component file."""
     os.makedirs(folder, exist_ok=True)
     z, n, e = make_station(duration, fs, f0, seed)
     path = os.path.join(folder, name + ".csv")

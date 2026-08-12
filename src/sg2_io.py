@@ -53,6 +53,8 @@ class Trace:
 
 
 def _clean_ascii(b):
+    """Decode a SEG-2 ASCII field: keep only printable characters and strip
+    the surrounding null padding."""
     return "".join(chr(c) for c in b if 32 <= c < 127).strip()
 
 
@@ -182,6 +184,9 @@ def read_sg2(path, order=None):
 
 
 def _fmt_spec(fmt_code, endian):
+    """Map a SEG-2 sample-format code to (bytes_per_sample, struct dtype).
+    Format 1 = 16-bit int, 2 = 32-bit int, 3 = 32-bit float, 4 = 64-bit
+    float, 5 = 24-bit int."""
     if fmt_code == 1:
         return 2, "i2"
     if fmt_code == 2:
@@ -196,6 +201,8 @@ def _fmt_spec(fmt_code, endian):
 
 
 def _decode_data(buf, n, dtype, fmt_code, endian):
+    """Decode the trace sample block into a list of floats, handling the
+    special 3-byte IEEE float32 variant used by some SEG-2 writers."""
     if fmt_code == 3:
         # IEEE float32 stored in 3 bytes: sign + 8-bit exponent + 23-bit
         # mantissa, packed in blocks of 5 int16 words (10 bytes): one

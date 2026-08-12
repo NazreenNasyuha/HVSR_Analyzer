@@ -102,6 +102,134 @@ def main():
     for key in ("z_entry", "n_entry", "e_entry", "pz_entry", "out_entry"):
         check("entry widget %s exists" % key, key in app._vars)
 
+    # ---- drag & drop: dropped files fill the input slots ----------------
+    def fake_event(data):
+        return type("E", (), {"data": data})()
+
+    ex_dir = os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "examples"))
+    if os.path.isdir(ex_dir):
+        z = os.path.join(ex_dir, "example_Z.mseed")
+        n = os.path.join(ex_dir, "example_N.mseed")
+        e = os.path.join(ex_dir, "example_E.mseed")
+        app._on_drop(fake_event("{%s} {%s} {%s}" % (z, n, e)))
+        pump(app, 0.2)
+        check("drop trio fills Z entry",
+              app._vars["z_entry"].get().strip() == z,
+              app._vars["z_entry"].get())
+        check("drop trio fills N entry",
+              app._vars["n_entry"].get().strip() == n)
+        check("drop trio fills E entry",
+              app._vars["e_entry"].get().strip() == e)
+        # a single dropped .eqd fills Z and clears N / E
+        eqd = os.path.join(ex_dir, "example.eqd")
+        app._on_drop(fake_event(eqd))
+        pump(app, 0.2)
+        check("drop single eqd fills Z only",
+              app._vars["z_entry"].get().strip() == eqd and
+              app._vars["n_entry"].get().strip() == "" and
+              app._vars["e_entry"].get().strip() == "")
+        # braced path with a space in the name parses to a single path
+        spaced = os.path.join(tempfile.mkdtemp(), "my file.mseed")
+        open(spaced, "wb").write(b"x")
+        parsed = app._dropped_paths(fake_event("{%s}" % spaced))
+        check("braced path with space parses", parsed == [spaced], parsed)
+        os.remove(spaced)
+        # two dropped files are rejected with a logged error, no crash
+        app._on_drop(fake_event("{%s} {%s}" % (z, n)))
+        pump(app, 0.1)
+        check("two-file drop logs an error, keeps entries",
+              app._vars["z_entry"].get().strip() == eqd)
+        # a mseed + text mix is rejected up front, entries left untouched
+        mix_txt = os.path.join(td, "mix_E.txt")
+        with open(mix_txt, "w") as fh:
+            fh.write("fs=100\n1.0\n2.0\n3.0\n")
+        app._on_drop(fake_event("{%s} {%s} {%s}" % (z, n, mix_txt)))
+        pump(app, 0.1)
+        check("mseed+text mix drop rejected, entries kept",
+              app._vars["z_entry"].get().strip() == eqd)
+        os.remove(mix_txt)
+        # a dropped folder routes to the batch runner (no dialog, no crash)
+        drop_dir = os.path.join(td, "drop_batch")
+        os.makedirs(drop_dir, exist_ok=True)
+        batched = []
+        orig_rb = app._run_batch
+        app._run_batch = lambda folder: batched.append(folder)
+        try:
+            app._on_drop(fake_event(drop_dir))
+            pump(app, 0.1)
+        finally:
+            app._run_batch = orig_rb
+        check("dropped folder routes to batch", batched == [drop_dir], batched)
+        # a second batch must never start while one is running
+        spawned = []
+        orig_bw = app._batch_worker
+        app._batch_worker = lambda *a, **k: spawned.append(True)
+        app._busy = True
+        try:
+            app._run_batch(drop_dir)
+        finally:
+            app._busy = False
+            app._batch_worker = orig_bw
+        check("run_batch guarded while busy", spawned == [], spawned)
+        # command-line mounting (file associations) uses the same trio rules
+        app._mount_cli([z, n, e])
+        pump(app, 0.2)
+        check("mount_cli trio fills entries",
+              app._vars["z_entry"].get().strip() == z and
+              app._vars["n_entry"].get().strip() == n and
+              app._vars["e_entry"].get().strip() == e)
+        # a dropped .pz fills the RESPONSE slot and nothing else
+        pz = os.path.join(td, "resp.pz")
+        with open(pz, "w") as fh:
+            fh.write("ZEROS 3 1.0 1.0\n")
+        app._on_drop(fake_event(pz))
+        pump(app, 0.1)
+        check("dropped .pz fills RESPONSE slot",
+              app._vars["pz_entry"].get().strip() == pz,
+              app._vars["pz_entry"].get())
+        os.remove(pz)
+        app._vars["pz_entry"].delete(0, "end")
+        # restore the pristine (empty) input state for the checks below
+        for slot in ("z", "n", "e"):
+            app._vars[slot + "_entry"].delete(0, "end")
+
+    # re-registration (and, with tkinterdnd2 installed, the real tkdnd
+    # registration over the whole widget tree) must never raise
+    try:
+        app._register_drop_target()
+        dnd_ok = True
+    except Exception:
+        dnd_ok = False
+    check("drop target registration does not raise", dnd_ok)
+
+    # ---- drop hint banner + hover highlight ------------------------------
+    import hvsr_gui_dnd
+    if hvsr_gui_dnd.DND_AVAILABLE:
+        import hvsr_theme
+        hint = app._drop_hint
+        check("drop hint banner present when DnD available", hint is not None)
+        app._highlight_hint(True)
+        pump(app, 0.05)
+        check("drop hint highlights on hover",
+              hint is not None and
+              str(hint.cget("foreground")) == hvsr_theme.current["ACCENT"],
+              str(hint.cget("foreground")) if hint else None)
+        check("drop card tints on hover",
+              hint is not None and app._drop_card is not None and
+              app._drop_card.cget("style") == "CardHover.TFrame",
+              app._drop_card.cget("style") if app._drop_card else None)
+        app._highlight_hint(False)
+        check("drop hint un-highlights on leave",
+              hint is not None and
+              str(hint.cget("foreground")) == hvsr_theme.current["TEXT_MUTED"])
+        check("drop card un-tints on leave",
+              hint is not None and app._drop_card is not None and
+              app._drop_card.cget("style") == "Card.TFrame")
+    else:
+        check("drop hint banner absent without DnD",
+              app._drop_hint is None)
+
     # ---- parameter parsing (manual defaults) ---------------------------
     p = app._params()
     check("win_len default 30", p["win_len"] == 30.0, p.get("win_len"))
@@ -442,6 +570,21 @@ def main():
     dlog = os.path.join(bout, "data_log.csv")
     check("batch wrote data-log rows", os.path.exists(dlog)
           and len(open(dlog).read().splitlines()) == 3)
+
+    # ---- batch completion notification -----------------------------------
+    notified = []
+    orig_notify = app._notify_done
+    app._notify_done = lambda: notified.append(True)
+    app._queue.put(("idle", None))
+    pump(app, 0.4)
+    app._notify_done = orig_notify
+    check("batch completion triggers notification", notified == [True],
+          notified)
+
+    # ---- file-association toggle (Windows only) ---------------------------
+    if sys.platform == "win32":
+        check("file-association toggle present on page 4",
+              "file_assoc" in app._vars)
 
     # ---- in-app TUTORIAL button -----------------------------------------
     app._open_tutorial()

@@ -65,6 +65,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Build standalone app with PyInstaller
+        # Packages the app with a private Python runtime + tkinter, so the
+        # installer ships an exe that needs no Python on the target machine.
+        run: |
+          pip install --quiet pyinstaller==6.22.0
+          python scripts/build_exe.py
+
       - name: Download Inno Setup 6
         shell: pwsh
         run: |
@@ -74,6 +81,8 @@ jobs:
           Start-Process -FilePath $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait
 
       - name: Compile installer
+        # Bundles dist/HVSR_Analyzer (the PyInstaller build from the step
+        # above) plus examples/docs; see installer/HVSR_Analyzer_Setup.iss
         shell: pwsh
         run: |
           $candidates = @(
@@ -99,3 +108,6 @@ jobs:
         with:
           files: installer/Output/HVSR_Analyzer_Setup.exe
           generate_release_notes: true
+          # Tolerate a release/asset created beforehand (e.g. by a manual
+          # `gh release create`) and refresh it with the CI-built installer.
+          overwrite: true

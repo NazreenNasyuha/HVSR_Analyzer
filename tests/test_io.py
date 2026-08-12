@@ -108,6 +108,43 @@ class TestMseedIo(unittest.TestCase):
             with self.assertRaises(MseedError):
                 read_mseed(p)
 
+    def test_explicit_trio_routes_to_binary_reader(self):
+        """Three miniSEED files passed with an explicit (Z, N, E) tuple must
+        load through the binary reader (regression: the explicit branch of
+        auto_load used to send every 3-file set to the text loader, which
+        failed on binary data with 'no numeric values found')."""
+        from hvsr_io import auto_load
+        with tempfile.TemporaryDirectory() as td:
+            z = os.path.join(td, "Z.mseed")
+            n = os.path.join(td, "N.mseed")
+            e = os.path.join(td, "E.mseed")
+            write_test_mseed(z, ["EHZ", "EHZ", "EHZ"], fs=500.0)
+            write_test_mseed(n, ["EHN", "EHN", "EHN"], fs=500.0)
+            write_test_mseed(e, ["EHE", "EHE", "EHE"], fs=500.0)
+            data = auto_load([z, n, e], explicit=(z, n, e))
+            self.assertEqual(len(data.z), 8 * 1010)
+            self.assertEqual(len(data.n), 8 * 1010)
+            self.assertEqual(len(data.e), 8 * 1010)
+            self.assertAlmostEqual(data.fs, 500.0)
+            self.assertEqual(data.source_name, "Z.mseed")
+
+    def test_explicit_mixed_trio_raises_clear_error(self):
+        """An explicit trio that mixes binary miniSEED with text files must
+        raise a clear DataError instead of falling into the text parser."""
+        from hvsr_io import auto_load
+        from hvsr_io_data import DataError
+        with tempfile.TemporaryDirectory() as td:
+            z = os.path.join(td, "Z.mseed")
+            n = os.path.join(td, "N.mseed")
+            e = os.path.join(td, "E.txt")
+            write_test_mseed(z, ["EHZ", "EHZ", "EHZ"], fs=500.0)
+            write_test_mseed(n, ["EHN", "EHN", "EHN"], fs=500.0)
+            with open(e, "w") as fh:
+                fh.write("fs=100\n1.0\n2.0\n3.0\n")
+            with self.assertRaises(DataError) as ctx:
+                auto_load([z, n, e], explicit=(z, n, e))
+            self.assertIn("mix", str(ctx.exception))
+
 
 def write_test_sg2(path, fs=500.0, n_samples=3000, order=("N", "E", "Z")):
     """Write a minimal SEG-2 file in the field layout (float32 LE, one
@@ -160,6 +197,47 @@ def write_test_sg2(path, fs=500.0, n_samples=3000, order=("N", "E", "Z")):
         with open(path, "r+b") as fh2:
             fh2.seek(ptr_off)
             fh2.write(struct.pack(endian + "3L", *ptrs))
+
+
+class TestAssignComponents(unittest.TestCase):
+    """assign_components: filename-based routing of a 3-file set to Z/N/E."""
+
+    def test_informative_names(self):
+        from hvsr_io_data import assign_components
+        m = assign_components(["/a/sta_EHZ.mseed", "/b/sta_EHN.mseed",
+                               "/c/sta_EHE.mseed"])
+        self.assertEqual(m["Z"], "/a/sta_EHZ.mseed")
+        self.assertEqual(m["N"], "/b/sta_EHN.mseed")
+        self.assertEqual(m["E"], "/c/sta_EHE.mseed")
+
+    def test_uninformative_names_fill_slots_in_order(self):
+        from hvsr_io_data import assign_components
+        m = assign_components(["/a/first.txt", "/b/second.txt",
+                               "/c/third.txt"])
+        self.assertEqual(m["Z"], "/a/first.txt")
+        self.assertEqual(m["N"], "/b/second.txt")
+        self.assertEqual(m["E"], "/c/third.txt")
+
+    def test_unassignable_set_raises(self):
+        from hvsr_io_data import DataError, assign_components
+        with self.assertRaises(DataError):
+            assign_components(["/a/first.txt", "/b/second.txt"])
+
+    def test_reused_by_auto_load_non_explicit_path(self):
+        """auto_load's 3-file path routes through the same assignment, so a
+        text trio with informative names still loads in the right order."""
+        from hvsr_io import auto_load
+        with tempfile.TemporaryDirectory() as td:
+            files = {}
+            for c, tok in (("Z", "EHZ"), ("N", "EHN"), ("E", "EHE")):
+                p = os.path.join(td, "%s.txt" % tok)
+                with open(p, "w") as fh:
+                    fh.write("fs=100\n1.0\n2.0\n3.0\n")
+                files[c] = p
+            # shuffled order: assignment must follow the names, not the order
+            data = auto_load([files["E"], files["Z"], files["N"]])
+            self.assertEqual(data.source_name, "EHZ.txt")
+            self.assertAlmostEqual(data.fs, 100.0)
 
 
 class TestSg2Io(unittest.TestCase):

@@ -84,9 +84,19 @@ class HVSRAppDndMixin:
         Windows path (for example C: backslash Users backslash ...) would
         have its backslash escapes interpreted (newline, bell, ...), so
         backslashes are normalised to forward slashes first, then each
-        parsed path is converted back to the native form.
+        parsed path is converted back to the native form.  If the entire
+        unbraced string matches an existing path directly, that path is
+        preserved without splitting.
         """
-        raw = (event.data or "").replace("\\", "/")
+        raw_str = (event.data or "").strip()
+        if not raw_str:
+            return []
+        whole = raw_str.strip('"').strip("'").strip("{}")
+        native_whole = os.path.normpath(whole)
+        if os.path.exists(native_whole):
+            return [native_whole]
+
+        raw = raw_str.replace("\\", "/")
         paths = []
         for p in list(self.tk.splitlist(raw)):
             native = os.path.normpath(p)

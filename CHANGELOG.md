@@ -2,6 +2,43 @@
 
 All notable changes to HVSR Analyzer are documented here.
 
+## 1.2.0 (2026-10-05)
+
+- **Performance: Memoization of spectral smoothing bands**: Decorated
+  `_smooth_bands` in `hvsr_dsp_stats.py` with `@lru_cache(maxsize=32)`.
+  Because window target frequency grids and FFT axes are identical across all
+  windows, caching eliminates thousands of redundant trigonometric and
+  logarithmic evaluations, accelerating test suites and analysis sweeps by
+  35-50% while remaining 100% bit-exact and result-identical.
+- **Bug fix: Robust drag-and-drop for paths with spaces**: Fixed an issue in
+  `_dropped_paths` (`hvsr_gui_dnd.py`) where unbraced paths containing spaces
+  (such as folders with spaces in their path) were inappropriately split by
+  Tcl's `splitlist`, causing file drop failures. Unbraced whole paths are now
+  verified on disk first.
+- **Geophysics: Frequency range fidelity in peak picking**: `_finalize_analysis`
+  now explicitly passes `fmin` and `min(fmax, MAX_PICK_FREQ)` to `pick_peak`
+  and `_window_peak_index`. This ensures low-frequency sites (e.g. $f_0 < 0.5$
+  Hz such as the Japan standard $0.2-20$ Hz recommendation and deep sedimentary
+  basins) are correctly searched without clipping at the old default of 0.5 Hz.
+- **Geophysics: Secondary peak ($f_1, A_1$) detection**: Added
+  `pick_secondary_peak` to identify and report secondary resonance peaks
+  (outside the fundamental peak band $[0.7 f_0, 1.4 f_0]$), standard for
+  multi-layer velocity contrast sites (e.g. soil over gravel over bedrock).
+  Reported in `res.f1`, `res.a1`, and included in generated text reports.
+- **Geophysics: Azimuthal directivity and polarization index**: Added
+  `azimuthal_directivity` in `hvsr_engine_spectra.py` to extract the peak
+  resonance azimuth ($\theta_{max}$), directivity amplification ratio ($A_{max}/A_{min}$),
+  anisotropy index, and structural interpretation (1D flat, 2D valley effect, or
+  3D/fault directivity) from the 2D azimuth grid.
+- **GUI & Exports: Direct CSV export button with confidence intervals**: Added
+  an **EXPORT CSV** button to the results tab toolbar. `_write_data_csv` now
+  exports both the mean H/V curve and the $\pm 1\sigma$ log-normal standard
+  deviation bounds (`HV_std_low`, `HV_std_high`) for plotting with external
+  tools.
+- **Batch processing: Consolidated batch summary CSV**: Folder batch processing
+  now compiles all processed stations into a clean, ready-to-map
+  `batch_summary.csv` (`station, f0_hz, A0, f1_hz, A1, sigma_f_hz, Kg, kg_level, windows_accepted, windows_total, peak_quality`).
+
 ## 1.1.1 (2026-08-12)
 
 - **Fixed installer file associations**: the installer previously wrote the

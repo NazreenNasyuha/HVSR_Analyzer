@@ -149,6 +149,7 @@ def _ko_band(fc, b_value):
     hi = fc * math.pow(10.0, half)
     return lo, hi
 
+@lru_cache(maxsize=32)
 def _smooth_bands(method, width, freqs, target_freqs):
     """Per-target (source_index, weight) pairs for a smoothing operator.
 

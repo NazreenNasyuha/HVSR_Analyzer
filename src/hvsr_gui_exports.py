@@ -60,15 +60,33 @@ class HVSRAppExportsMixin:
     def _write_data_csv(self, path, clean, res):
         n = min(len(clean.z), len(clean.n), len(clean.e))
         with open(path, "w", encoding="utf-8", newline="") as fh:
-            fh.write("time_s,Z,N,E,freq_Hz,HV\n")
+            fh.write("time_s,Z,N,E,freq_Hz,HV,HV_std_low,HV_std_high\n")
             dt = 1.0 / clean.fs
             freqs = res.freqs
             means = res.mean
+            lows = getattr(res, "low", []) or []
+            highs = getattr(res, "high", []) or []
             nf = len(freqs)
             for i in range(n):
-                fv = freqs[i] if i < nf else ""
-                hv = means[i] if i < nf else ""
-                fh.write("%.6f,%.8g,%.8g,%.8g,%s,%s\n" % (i * dt, clean.z[i], clean.n[i], clean.e[i], fv, hv))
+                fv = "%.6f" % freqs[i] if i < nf else ""
+                hv = "%.6f" % means[i] if i < nf else ""
+                lo = "%.6f" % lows[i] if i < len(lows) else ""
+                hi = "%.6f" % highs[i] if i < len(highs) else ""
+                fh.write("%.6f,%.8g,%.8g,%.8g,%s,%s,%s,%s\n" % (
+                    i * dt, clean.z[i], clean.n[i], clean.e[i], fv, hv, lo, hi))
+
+    def _export_csv(self):
+        if not self._last:
+            return
+        res, clean, station = self._last[0], self._last[1], self._last[2]
+        p = filedialog.asksaveasfilename(
+            title="Save CSV for " + station,
+            initialfile=station + "_data.csv",
+            defaultextension=".csv",
+            filetypes=[("CSV file", "*.csv"), ("All files", "*.*")])
+        if p:
+            self._write_data_csv(p, clean, res)
+            self._log_line("DATA CSV SAVED TO " + p)
 
     def _ask_saves(self, res, clean, station, opts):
         if opts.get("png"):

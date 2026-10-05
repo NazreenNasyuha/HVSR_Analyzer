@@ -143,6 +143,43 @@ def pick_peak(freqs, amps, fmin=0.5, fmax=10.0):
                 a0 = y1 - 0.25 * (y0 - y2) * offset
     return f0, a0
 
+def pick_secondary_peak(freqs, amps, f0, a0, fmin=0.5, fmax=10.0, min_prominence=1.2):
+    """Secondary peak (f1, a1) picking on the mean H/V curve outside the f0 peak band.
+
+    Identifies local maxima in [fmin, fmax] outside [0.7 * f0, 1.4 * f0]
+    (to avoid picking shoulders of the fundamental peak). Applies parabolic
+    interpolation in log-frequency for the peak position.
+    """
+    if not freqs or not amps or f0 <= 0:
+        return 0.0, 0.0
+    best_k = None
+    best_a = -1.0
+    for k in range(1, len(freqs) - 1):
+        f = freqs[k]
+        if fmin <= f <= fmax:
+            if 0.7 * f0 <= f <= 1.4 * f0:
+                continue
+            if amps[k] > amps[k - 1] and amps[k] > amps[k + 1] and amps[k] > best_a:
+                best_a = amps[k]
+                best_k = k
+    if best_k is None or best_a < min_prominence:
+        return 0.0, 0.0
+    # parabolic refinement
+    k = best_k
+    f1 = freqs[k]
+    a1 = amps[k]
+    if 0 < k < len(freqs) - 1:
+        y0, y1, y2 = amps[k - 1], amps[k], amps[k + 1]
+        denom = (y0 - 2.0 * y1 + y2)
+        if abs(denom) > 1e-30:
+            offset = 0.5 * (y0 - y2) / denom
+            if -1.0 < offset < 1.0:
+                lf0, lf1, lf2 = math.log(freqs[k - 1]), math.log(freqs[k]), math.log(freqs[k + 1])
+                lf = lf1 + offset * (lf2 - lf1) / 2.0
+                f1 = math.exp(lf)
+                a1 = y1 - 0.25 * (y0 - y2) * offset
+    return f1, a1
+
 def sesame_evaluate(freqs, amps, high, f0, a0, num_windows, win_len, sigma_f):
     """Return a dict of the SESAME 2004 reliability criteria."""
     limit_f0 = 10.0 / win_len
@@ -194,11 +231,23 @@ class HvsrResult:
         self.high = []
         self.f0 = 0.0
         self.a0 = 0.0
+        self.f1 = 0.0
+        self.a1 = 0.0
         self.sigma_f = 0.0
         self.n_windows_total = 0
         self.n_windows_accepted = 0
         self.window_len = 0.0
         self.overlap = 0.0
+        self.rejection = 1.5
+        self.fmin = DEFAULT_FMIN
+        self.fmax = DEFAULT_FMAX
+        self.f_low = 0.2
+        self.f_high = 20.0
+        self.b_value = DEFAULT_B_VALUE
+        self.taper = DEFAULT_TAPER
+        self.smoothing = DEFAULT_SMOOTHING
+        self.smooth_width = DEFAULT_SMOOTH_WIDTH
+        self.combo = "geometric"
         self.kg = 0.0
         self.kg_level = ""
         self.sesame = {}
@@ -221,14 +270,21 @@ def _finalize_analysis(curves, freqs, w_len, overlap, rejection,
     res.station = station
     res.window_len = w_len
     res.overlap = overlap
+    res.rejection = rejection
+    res.fmin = fmin
+    res.fmax = fmax
+    res.smoothing = smoothing
+    res.smooth_width = smooth_width
+    res.combo = combo
     res.n_windows_total = len(curves)
 
     valid = [True] * len(curves)
     n_accept = len(curves)
     if curves:
+        eff_fmax = min(fmax, MAX_PICK_FREQ)
         valid, n_accept = reject_windows(curves, freqs, rejection,
                                          max_iterations, fmin,
-                                         min(fmax, MAX_PICK_FREQ))
+                                         eff_fmax)
         mean, low, high = mean_and_std_curves(curves, valid)
         res.freqs = freqs
         res.mean = mean
@@ -237,19 +293,20 @@ def _finalize_analysis(curves, freqs, w_len, overlap, rejection,
         res.n_windows_accepted = n_accept
 
         # f0 and sigma_f
-        f0, a0 = pick_peak(freqs, mean)
+        f0, a0 = pick_peak(freqs, mean, fmin=fmin, fmax=eff_fmax)
         res.f0, res.a0 = f0, a0
         valid_idx = [i for i, v in enumerate(valid) if v]
         w_f0s = []
         for i in valid_idx:
-            k = _window_peak_index(freqs, curves[i], 0.5, MAX_PICK_FREQ)
+            k = _window_peak_index(freqs, curves[i], fmin, eff_fmax)
             if k is not None:
                 w_f0s.append(freqs[k])
         res.sigma_f = statistics.pstdev(w_f0s) if len(w_f0s) > 1 else 0.0
 
-        res.smoothing = smoothing
-        res.smooth_width = smooth_width
-        res.combo = combo
+        f1, a1 = pick_secondary_peak(freqs, mean, f0, a0, fmin, eff_fmax)
+        res.f1 = f1
+        res.a1 = a1
+
         res.kg, res.kg_level = vulnerability_kg(a0, f0)
         res.sesame = sesame_evaluate(freqs, mean, high, f0, a0,
                                      n_accept, w_len, res.sigma_f)
@@ -290,6 +347,9 @@ def analyze(data, w_len=30.0, overlap=0.0, rejection=1.5,
                              smoothing, smooth_width)
         if c is not None:
             curves.append(c)
-    return _finalize_analysis(curves, freqs, w_len, overlap, rejection,
-                              max_iterations, fmin, fmax, station, combo,
-                              smoothing, smooth_width)
+    res = _finalize_analysis(curves, freqs, w_len, overlap, rejection,
+                             max_iterations, fmin, fmax, station, combo,
+                             smoothing, smooth_width)
+    res.b_value = b_value
+    res.taper = taper
+    return res

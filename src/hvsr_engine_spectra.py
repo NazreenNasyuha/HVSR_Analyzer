@@ -246,6 +246,63 @@ def hv_vs_azimuth(data, w_len, overlap=0.0, taper=DEFAULT_TAPER, freqs=None,
         ang += azimuth_step
     return azimuths, freqs, grid
 
+def azimuthal_directivity(azimuths, freqs, grid, f0, band_ratio=0.2):
+    """Compute the peak directivity azimuth and polarization / anisotropy
+    ratio from an H/V vs azimuth grid.
+
+    Searches for the maximum H/V amplitude in the frequency band around f0
+    ([f0 * (1 - band_ratio), f0 * (1 + band_ratio)]).
+
+    Returns a dict:
+        peak_azimuth       : angle in degrees [0, 180) with highest amplification
+        a_max              : maximum H/V amplitude at peak azimuth near f0
+        a_min              : minimum H/V amplitude across azimuths near f0
+        directivity_ratio  : a_max / a_min (>= 1.0)
+        anisotropy_index   : (a_max - a_min) / a_max
+        description        : interpretation text ('Isotropic / 1D flat layer', etc.)
+    """
+    if not azimuths or not freqs or not grid or f0 <= 0:
+        return {
+            "peak_azimuth": 0.0, "a_max": 0.0, "a_min": 0.0,
+            "directivity_ratio": 1.0, "anisotropy_index": 0.0,
+            "description": "Insufficient data"
+        }
+    lo_f = f0 * (1.0 - band_ratio)
+    hi_f = f0 * (1.0 + band_ratio)
+    k_indices = [k for k, f in enumerate(freqs) if lo_f <= f <= hi_f]
+    if not k_indices:
+        best_k = min(range(len(freqs)), key=lambda k: abs(freqs[k] - f0))
+        k_indices = [best_k]
+
+    az_amps = []
+    for row in grid:
+        vals = [row[k] for k in k_indices if k < len(row)]
+        az_amps.append(max(vals) if vals else 0.0)
+
+    best_az_idx = max(range(len(az_amps)), key=lambda i: az_amps[i])
+    a_max = az_amps[best_az_idx]
+    a_min = min(az_amps) if az_amps else a_max
+    peak_az = azimuths[best_az_idx]
+
+    ratio = (a_max / a_min) if a_min > 1e-12 else 1.0
+    aniso = ((a_max - a_min) / a_max) if a_max > 1e-12 else 0.0
+
+    if ratio < 1.25:
+        desc = "Isotropic / 1D flat layer"
+    elif ratio < 1.6:
+        desc = "Moderate directivity / 2D valley effect"
+    else:
+        desc = "Strong directivity / Fault or 3D structure"
+
+    return {
+        "peak_azimuth": peak_az,
+        "a_max": a_max,
+        "a_min": a_min,
+        "directivity_ratio": ratio,
+        "anisotropy_index": aniso,
+        "description": desc,
+    }
+
 def _window_raw_spectra(z, n, e, fs, w_len, taper):
     """Detrend / taper one window and return its raw one-sided magnitude
     spectra (before spectral smoothing) for the Z, N, E channels together

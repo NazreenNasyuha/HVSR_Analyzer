@@ -109,6 +109,7 @@ class HVSRAppPreviewsMixin:
             done = 0
             failed = 0
             total = len(stations) + len(single_eqd)
+            summary_records = []
             for name, files in sorted(stations.items()):
                 try:
                     data = auto_load(files, swap_h=swap_h)
@@ -130,6 +131,12 @@ class HVSRAppPreviewsMixin:
                     self._save_outputs(res, clean, name, out_dir, opts)
                     if opts.get("log"):
                         self._append_data_log(res, clean, name, data.source_name, out_dir)
+                    summary_records.append((
+                        name, res.f0, res.a0, getattr(res, "f1", 0.0), getattr(res, "a1", 0.0),
+                        res.sigma_f, res.kg, res.kg_level,
+                        res.n_windows_accepted, res.n_windows_total,
+                        res.peak_quality
+                    ))
                     done += 1
                     self._queue.put(("log", "[%d] %s: f0=%.3f Hz A0=%.2f" % (done, name, res.f0, res.a0)))
                     self._queue.put(("progress", (done + failed, total, "BATCH")))
@@ -156,6 +163,12 @@ class HVSRAppPreviewsMixin:
                     self._save_outputs(res, clean, name, out_dir, opts)
                     if opts.get("log"):
                         self._append_data_log(res, clean, name, data.source_name, out_dir)
+                    summary_records.append((
+                        name, res.f0, res.a0, getattr(res, "f1", 0.0), getattr(res, "a1", 0.0),
+                        res.sigma_f, res.kg, res.kg_level,
+                        res.n_windows_accepted, res.n_windows_total,
+                        res.peak_quality
+                    ))
                     done += 1
                     self._queue.put(("log", "[%d] %s (%s): f0=%.3f Hz A0=%.2f" % (done, name, os.path.splitext(path)[1], res.f0, res.a0)))
                     self._queue.put(("progress", (done + failed, total, "BATCH")))
@@ -163,6 +176,15 @@ class HVSRAppPreviewsMixin:
                     failed += 1
                     self._queue.put(("log", "[!] %s (%s): %s" % (name, os.path.splitext(path)[1], exc)))
                     self._queue.put(("progress", (done + failed, total, "BATCH")))
+            if summary_records and opts.get("log"):
+                try:
+                    sum_path = os.path.join(out_dir, "batch_summary.csv")
+                    with open(sum_path, "w", encoding="utf-8", newline="") as sfh:
+                        sfh.write("station,f0_hz,A0,f1_hz,A1,sigma_f_hz,Kg,kg_level,windows_accepted,windows_total,peak_quality\n")
+                        for row in summary_records:
+                            sfh.write("%s,%.4f,%.2f,%.4f,%.2f,%.4f,%.2f,%s,%d,%d,%s\n" % row)
+                except Exception:
+                    pass
             self._queue.put(("log", "BATCH COMPLETE: %d OK, %d FAILED" % (done, failed)))
             self._queue.put(("idle", None))
         except Exception as exc:

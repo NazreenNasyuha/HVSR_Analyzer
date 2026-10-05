@@ -43,7 +43,7 @@ except Exception:
 from hvsr_engine_autotune import _SMOOTH_DEFAULTS, _STAGE2_CTX, _stage2_init, _stage2_job, auto_tune, sesame_score
 # Re-exported from hvsr_engine_core (split out of hvsr_engine) - the
 # public API stays importable from here.
-from hvsr_engine_core import HvsrResult, _finalize_analysis, analyze, mean_and_std_curves, peak_quality, pick_peak, reject_windows, sesame_evaluate, vulnerability_kg
+from hvsr_engine_core import HvsrResult, _finalize_analysis, analyze, mean_and_std_curves, peak_quality, pick_peak, pick_secondary_peak, reject_windows, sesame_evaluate, vulnerability_kg
 # Re-exported from hvsr_engine_defaults (split out of hvsr_engine) - the
 # public API stays importable from here.
 from hvsr_engine_defaults import DEFAULT_B_VALUE, DEFAULT_FILTER, DEFAULT_FILTER_ORDER, DEFAULT_FILTER_RIPPLE, DEFAULT_FMAX, DEFAULT_FMIN, DEFAULT_NFREQ, DEFAULT_SMOOTHING, DEFAULT_SMOOTH_WIDTH, DEFAULT_TAPER, MAX_PICK_FREQ
@@ -55,7 +55,7 @@ from hvsr_engine_preprocess import preprocess, trim_seconds
 from hvsr_engine_report import _build_log, _ok, write_report_file, write_target_file
 # Re-exported from hvsr_engine_spectra (split out of hvsr_engine) - the
 # public API stays importable from here.
-from hvsr_engine_spectra import _window_hv_curve, _window_raw_spectra, coherence, compute_spectra, hv_vs_azimuth, hv_vs_time, log_frequencies
+from hvsr_engine_spectra import _window_hv_curve, _window_raw_spectra, azimuthal_directivity, coherence, compute_spectra, hv_vs_azimuth, hv_vs_time, log_frequencies
 # Re-exported from hvsr_engine_support (split out of hvsr_engine) - the
 # public API stays importable from here.
 from hvsr_engine_support import _best_index, _fft_freqs, _magnitude, _magnitude_from_fft, _smooth_combine, _window_peak_index, _window_starts

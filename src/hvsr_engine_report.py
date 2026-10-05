@@ -22,6 +22,8 @@ def _build_log(res):
     log.append("Rejected windows         : %d" % (res.n_windows_total - res.n_windows_accepted))
     log.append("Fundamental frequency f0 : %.3f Hz" % res.f0)
     log.append("Peak amplification A0    : %.2f" % res.a0)
+    if getattr(res, "f1", 0.0) > 0 and getattr(res, "a1", 0.0) > 0:
+        log.append("Secondary peak f1        : %.3f Hz (A1=%.2f)" % (res.f1, res.a1))
     log.append("Std. dev. of f0 (sigma_f): %.3f Hz" % res.sigma_f)
     log.append("Vulnerability index Kg   : %.2f -> %s" % (res.kg, res.kg_level))
     log.append("Smoothing                : %s (width=%s)"

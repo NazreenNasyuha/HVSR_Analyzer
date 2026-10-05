@@ -20,7 +20,8 @@ from hvsr_dsp import (fft, ifft, detrend_linear, cosine_taper,
 from hvsr_io import read_three_channel, auto_load, DataError
 from hvsr_engine import (preprocess, analyze, auto_tune, log_frequencies,
                          sesame_score, write_target_file, write_report_file,
-                         coherence, hv_vs_time, hv_vs_azimuth, trim_seconds)
+                         coherence, hv_vs_time, hv_vs_azimuth, trim_seconds,
+                         pick_secondary_peak, azimuthal_directivity)
 from chart_render import write_png, HvsrChart
 
 try:
@@ -291,6 +292,62 @@ class TestCoherenceAndMaps(unittest.TestCase):
         # identity when longer than the signal
         same = trim_seconds(tdata, 0.0, 999.0)
         self.assertEqual(same.n_samples, 5000)
+
+    def test_azimuthal_directivity_identifies_peak_azimuth(self):
+        azimuths = [0.0, 45.0, 90.0, 135.0]
+        freqs = [0.5, 1.0, 2.0, 4.0, 8.0]
+        # Azimuth 45 deg has peak amplification at 2.0 Hz
+        grid = [
+            [1.0, 1.1, 1.2, 1.0, 0.9],
+            [1.0, 1.3, 3.5, 1.2, 0.9],  # Peak at 45 deg, 2 Hz
+            [1.0, 1.0, 1.5, 1.1, 0.8],
+            [1.0, 1.2, 1.8, 1.0, 0.9],
+        ]
+        res = azimuthal_directivity(azimuths, freqs, grid, f0=2.0)
+        self.assertEqual(res["peak_azimuth"], 45.0)
+        self.assertAlmostEqual(res["a_max"], 3.5, places=2)
+        self.assertGreater(res["directivity_ratio"], 1.5)
+        self.assertIn("directivity", res["description"].lower())
+
+
+class TestSecondaryPeakAndAttributes(unittest.TestCase):
+    """Tests for multi-peak detection and result object attributes."""
+
+    def test_pick_secondary_peak_detects_distinct_resonance(self):
+        freqs = [0.2 * (1.1 ** k) for k in range(50)]
+        # Curve with f0 ~ 1.5 Hz and secondary peak f1 ~ 5.0 Hz
+        amps = []
+        for f in freqs:
+            a0 = 3.0 * math.exp(-0.5 * ((math.log(f / 1.5) / 0.2) ** 2))
+            a1 = 2.2 * math.exp(-0.5 * ((math.log(f / 5.0) / 0.2) ** 2))
+            amps.append(1.0 + a0 + a1)
+        f1, a1 = pick_secondary_peak(freqs, amps, f0=1.5, a0=4.0, fmin=0.2, fmax=10.0)
+        self.assertGreater(f1, 4.0)
+        self.assertLess(f1, 6.0)
+        self.assertGreater(a1, 2.5)
+
+    def test_pick_secondary_peak_none_when_unimodal(self):
+        freqs = [0.5 * (1.1 ** k) for k in range(40)]
+        amps = [1.0 + 3.0 * math.exp(-0.5 * ((math.log(f / 2.0) / 0.2) ** 2))
+                for f in freqs]
+        f1, a1 = pick_secondary_peak(freqs, amps, f0=2.0, a0=4.0, fmin=0.5, fmax=10.0)
+        self.assertEqual(f1, 0.0)
+        self.assertEqual(a1, 0.0)
+
+    def test_result_attributes_populated(self):
+        if make_station is None:
+            return
+        z, n, e = make_station(duration=60.0, fs=100.0, f0=2.0)
+        from hvsr_io import ThreeChannel
+        data = ThreeChannel(z, n, e, 100.0, "syn_meta")
+        res = analyze(data, w_len=20.0, fmin=0.5, fmax=10.0, b_value=40.0, taper=0.05)
+        self.assertEqual(res.rejection, 1.5)
+        self.assertEqual(res.fmin, 0.5)
+        self.assertEqual(res.fmax, 10.0)
+        self.assertEqual(res.b_value, 40.0)
+        self.assertEqual(res.taper, 0.05)
+        self.assertTrue(hasattr(res, "f1"))
+        self.assertTrue(hasattr(res, "a1"))
 
 
 if __name__ == "__main__":

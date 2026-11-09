@@ -31,3 +31,9 @@ build/
 # UI review screenshots (local development artifacts)
 _ui_review/
 HVSR_Results_Screenshots/
+
+# Local-only living & agent documentation (never release/commit)
+ARCHITECTURE.md
+AGENTS.md
+architecture.md
+agents.md
